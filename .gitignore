@@ -6,6 +6,8 @@ report-worker/.wrangler/
 .env.cws
 .env.asc
 .env.amo
+data/community-brands.txt
+data/remote-flagged.txt
 knockoff-v*.zip
 safari/Knockoff/build/
 xcuserdata/

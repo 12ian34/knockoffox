@@ -55,30 +55,46 @@ set +a
 : "${AMO_JWT_ISSUER:?AMO_JWT_ISSUER not set in .env.amo}"
 : "${AMO_JWT_SECRET:?AMO_JWT_SECRET not set in .env.amo}"
 
-# AMO version notes come from the canonical release-notes file. Missing notes
-# are a warning, not a blocker — they can be added in the Developer Hub.
-METADATA_ARGS=()
-NOTES=$(node -e "
-  const fs = require('fs');
-  const md = fs.readFileSync('$ROOT_DIR/store-assets/release-notes.md', 'utf8');
-  const sec = md.split(/^## /m).slice(1)
-    .find(s => s.split('\n')[0].trim() === '$VERSION');
-  if (sec) console.log(sec.split('\n').slice(1).join('\n').trim());
-")
-if [[ -n "$NOTES" ]]; then
-  # Via env, not argv: notes start with "- " which node would parse as options.
-  NOTES="$NOTES" node -e "
-    const fs = require('fs');
-    fs.writeFileSync('$WORK_DIR/amo-metadata.json', JSON.stringify({
-      version: { release_notes: { 'en-US': process.env.NOTES } }
-    }, null, 2));
-  "
-  METADATA_ARGS=(--amo-metadata "$WORK_DIR/amo-metadata.json")
-else
-  echo "Warning: no '## $VERSION' section in store-assets/release-notes.md — submitting without version notes." >&2
-fi
+# First listed AMO submissions require listing metadata and a version license.
+# Use the manifest for listing copy, the release-notes file for version notes,
+# and the repo license as a custom license because FSL-1.1-MIT is not a
+# predefined AMO license slug.
+node - "$ROOT_DIR" "$WORK_DIR" "$VERSION" <<'NODE'
+const fs = require("fs");
+const path = require("path");
 
-echo "Submitting Knockoff v${VERSION} to AMO (listed channel)..."
+const [rootDir, workDir, version] = process.argv.slice(2);
+const manifest = JSON.parse(fs.readFileSync(path.join(rootDir, "manifest.json"), "utf8"));
+const releaseNotesMd = fs.readFileSync(path.join(rootDir, "store-assets/release-notes.md"), "utf8");
+const licenseText = fs.readFileSync(path.join(rootDir, "LICENSE"), "utf8");
+const section = releaseNotesMd
+  .split(/^## /m)
+  .slice(1)
+  .find((s) => s.split("\n")[0].trim() === version);
+const notes = section ? section.split("\n").slice(1).join("\n").trim() : "";
+
+const metadata = {
+  name: { "en-US": manifest.name },
+  summary: { "en-US": manifest.description },
+  categories: { firefox: ["shopping"] },
+  version: {
+    custom_license: {
+      name: { "en-US": "FSL-1.1-MIT" },
+      text: { "en-US": licenseText }
+    }
+  }
+};
+
+if (notes) {
+  metadata.version.release_notes = { "en-US": notes };
+} else {
+  console.error(`Warning: no '## ${version}' section in store-assets/release-notes.md — submitting without version notes.`);
+}
+
+fs.writeFileSync(path.join(workDir, "amo-metadata.json"), JSON.stringify(metadata, null, 2) + "\n");
+NODE
+
+echo "Submitting Knockoffox v${VERSION} to AMO (listed channel)..."
 export WEB_EXT_API_KEY="$AMO_JWT_ISSUER"
 export WEB_EXT_API_SECRET="$AMO_JWT_SECRET"
 npx --yes web-ext@10 sign \
@@ -86,7 +102,7 @@ npx --yes web-ext@10 sign \
   --artifacts-dir "$WORK_DIR/artifacts" \
   --channel listed \
   --approval-timeout 0 \
-  ${METADATA_ARGS[@]+"${METADATA_ARGS[@]}"}
+  --amo-metadata "$WORK_DIR/amo-metadata.json"
 
 echo "Submitted v${VERSION}. AMO publishes automatically after validation:"
 echo "  https://addons.mozilla.org/en-US/developers/addons"

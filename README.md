@@ -106,6 +106,9 @@ The easiest, highest-value contributions are brand list fixes; see
 [CONTRIBUTING.md](CONTRIBUTING.md). There is no build step; the extension is
 plain JavaScript, loadable directly from the repo.
 
+Future improvement notes live in [ROADMAP.md](ROADMAP.md), including the
+backend/API independence plan.
+
 ```text
 manifest.json             MV3 manifest
 data/known-brands.js      curated established brands (edit this one!)

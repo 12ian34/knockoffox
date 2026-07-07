@@ -28,3 +28,5 @@ as a temporary Firefox add-on by selecting `manifest.json` from
   `src/detector.js`, `src/pdp-brand.js`, and finally `src/content.js`.
 - The Safari wrapper under `safari/` is inherited upstream material and is not
   automatically kept in sync for Firefox-only changes.
+- Future product/backend improvement notes live in `ROADMAP.md`. Keep the
+  extension functional from bundled lists even if remote APIs are unavailable.
