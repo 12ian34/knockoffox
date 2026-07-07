@@ -1,0 +1,42 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="frames.css">
+<style>
+  body{width:1280px;height:800px}
+  .split{display:flex;gap:72px;align-items:center;flex:1}
+  .stack{display:flex;flex-direction:column;gap:18px;align-items:center}
+  .menu{transform:scale(1.2);transform-origin:center}
+  .flow{display:flex;align-items:center;gap:14px;margin-top:30px;font:600 14px/1.4 var(--sans);color:var(--ink-2)}
+  .flow .step-chip{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+  .flow svg{width:16px;height:16px;color:var(--ink-3)}
+</style>
+</head><body>
+<div class="frame">
+  <div class="split">
+    <div style="flex:1">
+      <div class="kicker">Community powered</div>
+      <h1>Wrong call? Fixed for everyone.</h1>
+      <p class="sub">Report a misclassified brand in one click. Curated fixes ship to every
+      install within a day. No extension update required.</p>
+      <div class="flow">
+        <span class="step-chip">Report</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>
+        <span class="step-chip">Review</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h15M14 6l6 6-6 6"/></svg>
+        <span class="step-chip">Everyone's protected</span>
+      </div>
+    </div>
+    <div class="stack" style="margin-right:48px">
+      <div class="menu">
+        <div class="menu-head"><span class="b">Halverson &amp; Sons</span><span class="menu-verdict amber">Suspect brand</span></div>
+        <div class="menu-reason">Unrecognized brand: not on any list yet.</div>
+        <div class="menu-sep"></div>
+        <div class="menu-row hover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8 19 5.4v5.2c0 4.6-2.9 7.8-7 9.6-4.1-1.8-7-5-7-9.6V5.4Z"/><path d="m8.8 11.9 2.3 2.3 4.3-4.7"/></svg>Trust this brand</div>
+        <div class="menu-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/></svg>Block this brand</div>
+        <div class="menu-sep"></div>
+        <div class="menu-row quiet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4.5C7.7 3 10.3 3 13 4.5c2 1.1 4 1.3 6 .6V15c-2 .7-4 .5-6-.6-2.7-1.5-5.3-1.5-8 0"/></svg>Report as a real brand</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,12 @@
+.DS_Store
+node_modules/
+.wrangler/
+report-worker/.secrets.local
+report-worker/.wrangler/
+.env.cws
+.env.asc
+.env.amo
+knockoff-v*.zip
+safari/Knockoff/build/
+xcuserdata/
+DerivedData/

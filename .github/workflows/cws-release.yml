@@ -1,0 +1,107 @@
+name: Chrome Web Store Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Package & Publish Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get local version
+        id: local
+        run: echo "version=$(node -e "console.log(require('./manifest.json').version)")" >> "$GITHUB_OUTPUT"
+
+      - name: Get access token
+        id: auth
+        run: |
+          RESPONSE=$(curl -s -X POST https://oauth2.googleapis.com/token \
+            -d "client_id=${{ secrets.CWS_CLIENT_ID }}" \
+            -d "client_secret=${{ secrets.CWS_CLIENT_SECRET }}" \
+            -d "refresh_token=${{ secrets.CWS_REFRESH_TOKEN }}" \
+            -d "grant_type=refresh_token")
+          TOKEN=$(echo "$RESPONSE" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            if(d.error){console.error('Auth failed:',d.error_description||d.error);process.exit(1)}
+            console.log(d.access_token)
+          ")
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch published version
+        id: published
+        run: |
+          RESPONSE=$(curl -s \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            "https://chromewebstore.googleapis.com/v2/publishers/${{ secrets.CWS_PUBLISHER_ID }}/items/${{ secrets.CWS_EXTENSION_ID }}:fetchStatus")
+          VERSION=$(echo "$RESPONSE" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            const ch=(d.publishedItemRevisionStatus?.distributionChannels||[])[0];
+            console.log(ch?.crxVersion||'0.0.0')
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Published version: $VERSION"
+
+      - name: Check version change
+        id: check
+        run: |
+          if [ "${{ steps.local.outputs.version }}" = "${{ steps.published.outputs.version }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Local v${{ steps.local.outputs.version }} matches published. Skipping."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "Version changed: ${{ steps.published.outputs.version }} → ${{ steps.local.outputs.version }}"
+          fi
+
+      - name: Validate store listing
+        if: steps.check.outputs.skip == 'false'
+        run: node scripts/render-listing.js --check
+
+      - name: Package zip
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          bash scripts/package.sh
+          mv "knockoff-v${{ steps.local.outputs.version }}.zip" knockoff.zip
+
+      - name: Upload to Chrome Web Store
+        if: steps.check.outputs.skip == 'false'
+        id: upload
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -X POST \
+            -T knockoff.zip \
+            "https://chromewebstore.googleapis.com/upload/v2/publishers/${{ secrets.CWS_PUBLISHER_ID }}/items/${{ secrets.CWS_EXTENSION_ID }}:upload")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Upload response ($HTTP_CODE): $BODY"
+          if [ "$HTTP_CODE" -ge 400 ]; then
+            echo "Upload failed with HTTP $HTTP_CODE"
+            exit 1
+          fi
+
+      - name: Publish extension
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.token }}" \
+            -H "x-goog-api-version: 2" \
+            -X POST \
+            "https://chromewebstore.googleapis.com/v2/publishers/${{ secrets.CWS_PUBLISHER_ID }}/items/${{ secrets.CWS_EXTENSION_ID }}:publish")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          echo "Publish response ($HTTP_CODE): $BODY"
+          STATE=$(echo "$BODY" | node -e "
+            const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+            console.log(d.state || d.status?.publisherStatus || d.status || 'UNKNOWN')
+          " 2>/dev/null || echo "UNKNOWN")
+          echo "Publish state: $STATE"
+          case "$STATE" in
+            PENDING_REVIEW|PUBLISHED|PUBLISHED_TO_TESTERS|STAGED|OK) echo "Submission successful." ;;
+            *) echo "Warning: Unexpected state $STATE — check the developer dashboard." ;;
+          esac
